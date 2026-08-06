@@ -1,0 +1,117 @@
+{
+  "name": "skeptic-monkey",
+  "displayName": "SkepticMonkey",
+  "description": "Chat with SkepticMonkey and view line-level uncertainty highlights on generated code.",
+  "version": "0.1.0",
+  "publisher": "datapaf",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "uncertainty",
+    "hallucination",
+    "llm",
+    "code generation"
+  ],
+  "activationEvents": [
+    "onCommand:skepticMonkey.openChat",
+    "onView:skepticMonkey.launcher"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skepticMonkey",
+          "title": "SkepticMonkey",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "skepticMonkey": [
+        {
+          "id": "skepticMonkey.launcher",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "skepticMonkey.openChat",
+        "title": "SkepticMonkey: Open Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "skepticMonkey.clearChat",
+        "title": "SkepticMonkey: Clear Chat",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "skepticMonkey.launcher.open",
+        "title": "SkepticMonkey: Open Chat",
+        "icon": "$(comment-discussion)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "skepticMonkey.openChat",
+          "when": "view == skepticMonkey.launcher",
+          "group": "navigation"
+        },
+        {
+          "command": "skepticMonkey.clearChat",
+          "when": "view == skepticMonkey.launcher",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "skepticMonkey.launcher.open",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SkepticMonkey",
+      "properties": {
+        "skepticMonkey.apiUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "Base URL of the SkepticMonkey API server."
+        },
+        "skepticMonkey.uncertaintyThreshold": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Lines with uncertainty above this threshold are highlighted in red; others in green (code fences only)."
+        },
+        "skepticMonkey.requestTimeoutMs": {
+          "type": "number",
+          "default": 600000,
+          "minimum": 1000,
+          "description": "HTTP timeout for /estimate/line requests (milliseconds)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
+    "typescript": "^5.3.3"
+  }
+}
