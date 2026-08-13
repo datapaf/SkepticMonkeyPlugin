@@ -36,6 +36,31 @@ export function buildInputText(userMessage: string): string {
   return `${DEEPSEEK_BOS}${DEEPSEEK_SYSTEM}\n### Instruction:\n${instruction}\n\n### Response:\n`;
 }
 
+export async function fetchModelName(
+  apiUrl: string,
+  timeoutMs = 10_000,
+): Promise<string | undefined> {
+  const base = apiUrl.replace(/\/+$/, "");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${base}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return undefined;
+    }
+    const payload = (await response.json()) as { llm_id?: string };
+    return payload.llm_id?.trim() || undefined;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function estimateLineUncertainty(
   apiUrl: string,
   inputText: string,

@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import {
   buildInputText,
   estimateLineUncertainty,
+  fetchModelName,
   LineEstimateResponse,
 } from "./apiClient";
 
@@ -30,6 +31,7 @@ export class ChatPanel {
   private readonly disposables: vscode.Disposable[] = [];
   private messages: ChatMessage[] = [];
   private busy = false;
+  private modelName?: string;
 
   private constructor(
     panel: vscode.WebviewPanel,
@@ -48,6 +50,7 @@ export class ChatPanel {
         switch (message.type) {
           case "ready":
             this.postState();
+            await this.refreshModelName();
             break;
           case "send":
             await this.handleSend(String(message.text ?? ""));
@@ -122,14 +125,23 @@ export class ChatPanel {
   }
 
   private postState(): void {
-    const { apiUrl, threshold } = this.getConfig();
+    const { threshold } = this.getConfig();
     void this.panel.webview.postMessage({
       type: "state",
       messages: this.messages,
       busy: this.busy,
-      apiUrl,
+      modelName: this.modelName,
       threshold,
     });
+  }
+
+  private async refreshModelName(): Promise<void> {
+    const { apiUrl } = this.getConfig();
+    const name = await fetchModelName(apiUrl);
+    if (name) {
+      this.modelName = name;
+      this.postState();
+    }
   }
 
   private async handleSend(rawText: string): Promise<void> {
@@ -155,6 +167,10 @@ export class ChatPanel {
         buildInputText(text),
         timeoutMs,
       );
+
+      if (result.model_path) {
+        this.modelName = result.model_path;
+      }
 
       this.messages.push({
         id: `a-${Date.now()}`,
@@ -229,7 +245,7 @@ export class ChatPanel {
   <div id="apiHint" class="api-hint"></div>
   <main id="messages" class="messages" aria-live="polite"></main>
   <footer class="composer">
-    <textarea id="input" rows="3" placeholder="Ask SkepticMonkey… (only this message is sent to the API)"></textarea>
+    <textarea id="input" rows="3" placeholder="Ask AI"></textarea>
     <button id="sendBtn" class="send-btn">Send</button>
   </footer>
   <script nonce="${nonce}" src="${markedUri}"></script>

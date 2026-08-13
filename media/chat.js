@@ -26,20 +26,22 @@
       .replace(/"/g, "&quot;");
   }
 
-  function uncertaintyIntensity(label, ueThreshold) {
-    const span = Math.max(1e-6, 1 - ueThreshold);
-    return Math.min(1, Math.max(0, (label - ueThreshold) / span));
+  /**
+   * Intensity from absolute uncertainty: 0 → transparent, 1 → full red.
+   * Callers still gate on label > threshold before highlighting.
+   */
+  function uncertaintyIntensity(label, _ueThreshold) {
+    return Math.min(1, Math.max(0, Number(label) || 0));
   }
 
-  /** Background-only fill so syntax colors remain visible. */
+  /** Background fill: transparent at 0 → strong red at 1. */
   function uncertaintyFillStyle(intensity) {
-    const fillAlpha = 0.12 + intensity * 0.4;
-    return `background-color: rgba(198, 40, 40, ${fillAlpha.toFixed(3)});`;
+    const alpha = intensity * 0.62;
+    return `background-color: rgba(198, 40, 40, ${alpha.toFixed(3)});`;
   }
 
-  function scoreColorStyle(intensity) {
-    const textAlpha = 0.55 + intensity * 0.45;
-    return `color: rgba(198, 40, 40, ${textAlpha.toFixed(3)});`;
+  function scoreColorStyle(_intensity) {
+    return "color: #e53935;";
   }
 
   function fenceLanguage(fenceLine) {
@@ -223,10 +225,72 @@
     return `<div class="markdown-body">${marked.parse(text)}</div>`;
   }
 
+  function isProgrammingLanguage(lang) {
+    if (!lang) {
+      return false;
+    }
+    const key = String(lang).toLowerCase();
+    // Unlabeled / plain-output fences — no uncertainty highlight
+    if (
+      /^(plaintext|text|txt|output|console|shell-session|repl|raw|none)$/.test(
+        key,
+      )
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  function displayLanguageName(lang) {
+    if (!isProgrammingLanguage(lang)) {
+      return "";
+    }
+    const names = {
+      py: "Python",
+      python: "Python",
+      python3: "Python",
+      js: "JavaScript",
+      javascript: "JavaScript",
+      ts: "TypeScript",
+      typescript: "TypeScript",
+      tsx: "TSX",
+      jsx: "JSX",
+      rb: "Ruby",
+      ruby: "Ruby",
+      rs: "Rust",
+      rust: "Rust",
+      go: "Go",
+      java: "Java",
+      c: "C",
+      cpp: "C++",
+      "c++": "C++",
+      cs: "C#",
+      csharp: "C#",
+      sh: "Shell",
+      bash: "Shell",
+      shell: "Shell",
+      zsh: "Shell",
+      sql: "SQL",
+      html: "HTML",
+      css: "CSS",
+      json: "JSON",
+      yaml: "YAML",
+      yml: "YAML",
+      md: "Markdown",
+      markdown: "Markdown",
+    };
+    const key = String(lang).toLowerCase();
+    if (names[key]) {
+      return names[key];
+    }
+    return key.charAt(0).toUpperCase() + key.slice(1);
+  }
+
   function renderCodeBlock(codeItems, lang, ueThreshold) {
     const blockState = { kind: null, opener: null };
     const rows = [];
     const expanded = expandCodeItems(codeItems);
+    const applyUncertainty = isProgrammingLanguage(lang);
 
     for (let i = 0; i < expanded.length; i++) {
       const item = expanded[i];
@@ -237,7 +301,11 @@
       // Per-line highlight keeps scores aligned with the exact source line.
       const hlLine = highlightCode(rawLine, lang);
 
-      if (!commentOnly && label > ueThreshold) {
+      if (
+        applyUncertainty &&
+        !commentOnly &&
+        label > ueThreshold
+      ) {
         const intensity = uncertaintyIntensity(label, ueThreshold);
         const leadingMatch = rawLine.match(/^[ \t]*/);
         const leading = leadingMatch ? leadingMatch[0] : "";
@@ -269,13 +337,18 @@
       }
     }
 
-    const langClass = lang
-      ? ` language-${escapeHtml(normalizeHljsLang(lang))}`
+    const normalized = normalizeHljsLang(lang);
+    const langClass = lang ? ` language-${escapeHtml(normalized)}` : "";
+    const langLabel = displayLanguageName(lang);
+    const header = langLabel
+      ? `<div class="code-lang">${escapeHtml(langLabel)}</div>`
       : "";
     return (
+      `<div class="code-block-wrap">` +
+      header +
       `<pre class="code-block"><code class="hljs${langClass}">` +
       rows.join("") +
-      `</code></pre>`
+      `</code></pre></div>`
     );
   }
 
@@ -364,8 +437,7 @@
     if (!messages || messages.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent =
-        "Start a conversation. Only your latest message is sent to SkepticMonkey; replies show uncertainty on code lines.";
+      empty.textContent = "Skeptic Monkey\n[Conceptual Preview]";
       messagesEl.appendChild(empty);
       return;
     }
@@ -374,16 +446,6 @@
       const bubble = document.createElement("div");
       bubble.className = `bubble ${msg.role}`;
 
-      const role = document.createElement("div");
-      role.className = "role";
-      role.textContent =
-        msg.role === "user"
-          ? "You"
-          : msg.role === "assistant"
-            ? "SkepticMonkey"
-            : "Error";
-      bubble.appendChild(role);
-
       const body = document.createElement("div");
       if (msg.role === "assistant") {
         body.innerHTML = renderAssistantBody(msg);
@@ -391,20 +453,6 @@
         body.innerHTML = renderPlain(msg.content || "");
       }
       bubble.appendChild(body);
-
-      if (msg.meta && (msg.meta.model_path || msg.meta.estimator)) {
-        const meta = document.createElement("div");
-        meta.className = "meta";
-        const bits = [];
-        if (msg.meta.model_path) {
-          bits.push(msg.meta.model_path);
-        }
-        if (msg.meta.estimator) {
-          bits.push(msg.meta.estimator);
-        }
-        meta.textContent = bits.join(" · ");
-        bubble.appendChild(meta);
-      }
 
       messagesEl.appendChild(bubble);
     }
@@ -456,7 +504,9 @@
     }
     threshold =
       typeof message.threshold === "number" ? message.threshold : 0.5;
-    apiHint.textContent = `API: ${message.apiUrl || "http://127.0.0.1:8000"} · threshold ${threshold}`;
+    apiHint.textContent = message.modelName
+      ? String(message.modelName)
+      : "Model unknown";
     setBusy(Boolean(message.busy));
     renderMessages(message.messages || []);
   });

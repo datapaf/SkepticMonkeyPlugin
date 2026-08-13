@@ -103,6 +103,7 @@ body {
   opacity: 0.7;
   max-width: 28ch;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 .bubble {
@@ -118,22 +119,17 @@ body {
 }
 
 .bubble.assistant {
-  background: var(--sm-assistant-bg);
+  background: transparent;
+  border-color: transparent;
   align-self: stretch;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .bubble.system {
   background: var(--sm-system-bg);
   align-self: stretch;
   border-color: color-mix(in srgb, var(--sm-uncertain) 40%, var(--sm-border));
-}
-
-.role {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
-  margin-bottom: 6px;
 }
 
 .content {
@@ -207,18 +203,31 @@ body {
   color: var(--vscode-textLink-foreground);
 }
 
-.meta {
-  margin-top: 8px;
-  font-size: 11px;
-  opacity: 0.65;
-}
-
-.code-block {
+.code-block-wrap {
   margin: 0.65em 0;
-  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--sm-border);
   background: var(--vscode-textCodeBlock-background, color-mix(in srgb, #000 35%, transparent));
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.code-lang {
+  padding: 6px 12px 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  font-family: var(--vscode-font-family);
+}
+
+.code-block {
+  margin: 0;
+  padding: 8px 12px 10px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   overflow-x: auto;
   max-width: 100%;
 }
