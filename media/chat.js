@@ -38,13 +38,129 @@
     );
   }
 
+  function fenceLanguage(fenceLine) {
+    const match = fenceLine.trim().match(/^```(\w[\w+-]*)?/);
+    return (match && match[1] ? match[1] : "").toLowerCase();
+  }
+
+  function usesHashComments(lang) {
+    return (
+      !lang ||
+      /^(py|python|ruby|rb|perl|pl|r|shell|bash|sh|zsh|powershell|ps1|yaml|yml|toml|dockerfile|makefile|cmake|elixir|ex|julia|jl|python3)$/.test(
+        lang,
+      )
+    );
+  }
+
+  function usesSlashComments(lang) {
+    return (
+      !lang ||
+      /^(js|javascript|ts|typescript|jsx|tsx|java|c|cpp|c\+\+|csharp|cs|go|rust|rs|kotlin|kt|swift|scala|php|dart|groovy|objectivec|objc|jsonc|vue|svelte)$/.test(
+        lang,
+      )
+    );
+  }
+
+  function usesDashComments(lang) {
+    return !lang || /^(sql|haskell|hs|lua|elm)$/.test(lang);
+  }
+
   /**
-   * Highlight only code lines (inside markdown fences) whose uncertainty
-   * exceeds the threshold. Fill intensity scales with how far above threshold.
+   * True only when the whole line is a comment (no code).
+   * Lines like `x = 1  # note` or `foo(); // note` are NOT comment-only.
+   * Updates blockState for multi-line block comments, HTML comments, and docstrings.
+   */
+  function isCommentOnlyLine(stripped, lang, blockState) {
+    if (!stripped) {
+      return false;
+    }
+
+    if (blockState.kind === "slash") {
+      const end = stripped.indexOf("*/");
+      if (end === -1) {
+        return true;
+      }
+      blockState.kind = null;
+      // Comment-only iff nothing but whitespace after */
+      return stripped.slice(end + 2).trim() === "";
+    }
+    if (blockState.kind === "html") {
+      const end = stripped.indexOf("-->");
+      if (end === -1) {
+        return true;
+      }
+      blockState.kind = null;
+      return stripped.slice(end + 3).trim() === "";
+    }
+    if (blockState.kind === "hash-doc") {
+      const opener = blockState.opener || '"""';
+      const end = stripped.indexOf(opener);
+      if (end === -1) {
+        return true;
+      }
+      blockState.kind = null;
+      blockState.opener = null;
+      return stripped.slice(end + opener.length).trim() === "";
+    }
+
+    // Full-line line comments (must start at first non-space char).
+    if (usesHashComments(lang) && stripped.startsWith("#")) {
+      return true;
+    }
+    if (usesDashComments(lang) && stripped.startsWith("--")) {
+      return true;
+    }
+    if (usesSlashComments(lang) && stripped.startsWith("//")) {
+      return true;
+    }
+
+    // Full-line /* ... */ or start of a multi-line block comment.
+    if (usesSlashComments(lang) && stripped.startsWith("/*")) {
+      const end = stripped.indexOf("*/");
+      if (end === -1) {
+        blockState.kind = "slash";
+        return true;
+      }
+      return stripped.slice(end + 2).trim() === "";
+    }
+
+    if (
+      (!lang || /^(html|xml|svg|markdown|md)$/.test(lang)) &&
+      stripped.startsWith("<!--")
+    ) {
+      const end = stripped.indexOf("-->");
+      if (end === -1) {
+        blockState.kind = "html";
+        return true;
+      }
+      return stripped.slice(end + 3).trim() === "";
+    }
+
+    // Full-line Python/Ruby docstrings.
+    if (usesHashComments(lang) && /^("""|''')/.test(stripped)) {
+      const opener = stripped.startsWith('"""') ? '"""' : "'''";
+      const rest = stripped.slice(3);
+      const end = rest.indexOf(opener);
+      if (end === -1) {
+        blockState.kind = "hash-doc";
+        blockState.opener = opener;
+        return true;
+      }
+      return rest.slice(end + 3).trim() === "";
+    }
+
+    return false;
+  }
+
+  /**
+   * Highlight uncertain code lines inside fences. Skips comment-only lines;
+   * code lines that also have trailing comments can still be highlighted.
    */
   function colorizeLineUeOutput(lines, ueThreshold) {
     const parts = [];
     let inCodeBlock = false;
+    let lang = "";
+    const blockState = { kind: null, opener: null };
 
     for (const item of lines || []) {
       const line = item.text ?? "";
@@ -59,14 +175,27 @@
 
       if (isFence) {
         textClass = "fence";
-        inCodeBlock = !inCodeBlock;
-      } else if (inCodeBlock && label > ueThreshold) {
-        showScore = true;
-        textClass = "high";
-        scoreClass = "high";
-        intensity = uncertaintyIntensity(label, ueThreshold);
+        if (!inCodeBlock) {
+          lang = fenceLanguage(stripped);
+          blockState.kind = null;
+          blockState.opener = null;
+          inCodeBlock = true;
+        } else {
+          inCodeBlock = false;
+          lang = "";
+          blockState.kind = null;
+          blockState.opener = null;
+        }
       } else if (inCodeBlock) {
-        textClass = "code";
+        const commentOnly = isCommentOnlyLine(stripped, lang, blockState);
+        if (!commentOnly && label > ueThreshold) {
+          showScore = true;
+          textClass = "high";
+          scoreClass = "high";
+          intensity = uncertaintyIntensity(label, ueThreshold);
+        } else {
+          textClass = "code";
+        }
       }
 
       const displayLine = escapeHtml(line).replace(/\n/g, "");
