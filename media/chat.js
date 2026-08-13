@@ -10,6 +10,7 @@
 
   let threshold = 0.5;
   let busy = false;
+  const seenMessageIds = new Set();
 
   if (typeof marked !== "undefined") {
     marked.setOptions({
@@ -435,6 +436,7 @@
     messagesEl.innerHTML = "";
 
     if (!messages || messages.length === 0) {
+      seenMessageIds.clear();
       const empty = document.createElement("div");
       empty.className = "empty";
       empty.textContent = "Skeptic Monkey\n[Conceptual Preview]";
@@ -442,9 +444,19 @@
       return;
     }
 
+    const currentIds = new Set();
     for (const msg of messages) {
       const bubble = document.createElement("div");
       bubble.className = `bubble ${msg.role}`;
+
+      const isNew = msg.id && !seenMessageIds.has(msg.id);
+      if (isNew && msg.role === "assistant") {
+        bubble.classList.add("fade-in");
+      }
+      if (msg.id) {
+        currentIds.add(msg.id);
+        seenMessageIds.add(msg.id);
+      }
 
       const body = document.createElement("div");
       if (msg.role === "assistant") {
@@ -455,6 +467,13 @@
       bubble.appendChild(body);
 
       messagesEl.appendChild(bubble);
+    }
+
+    // Drop ids that were cleared from the conversation
+    for (const id of [...seenMessageIds]) {
+      if (!currentIds.has(id)) {
+        seenMessageIds.delete(id);
+      }
     }
 
     if (busy) {

@@ -116,6 +116,19 @@ body {
   padding-right: 0;
 }
 
+.bubble.assistant.fade-in {
+  animation: reply-fade-in 0.45s ease-out;
+}
+
+@keyframes reply-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .bubble.system {
   background: var(--sm-system-bg);
   align-self: stretch;
