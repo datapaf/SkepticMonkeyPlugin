@@ -7,7 +7,8 @@ Chat with [SkepticMonkey](https://github.com/datapaf/SkepticMonkey) from VS Code
 - **Chat tab in the editor area** (full-width webview panel)
 - Activity-bar shortcut: SkepticMonkey icon → **Open Chat**
 - Sends **only the latest user message** to the API (conversation history is local UI only)
-- Shows the full generation; only **code lines above the uncertainty threshold** are highlighted in red with scores
+- Shows the full generation as **markdown** with **syntax-highlighted** code
+- Only **code lines above the uncertainty threshold** are highlighted (comment-only lines skipped); fill intensity scales with uncertainty
 - Configurable API URL and uncertainty threshold
 
 ## Prerequisites

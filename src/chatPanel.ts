@@ -186,6 +186,25 @@ export class ChatPanel {
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, "media", "chat.css"),
     );
+    const markedUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, "media", "vendor", "marked.min.js"),
+    );
+    const hljsUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.extensionUri,
+        "media",
+        "vendor",
+        "highlight.min.js",
+      ),
+    );
+    const hljsThemeUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.extensionUri,
+        "media",
+        "vendor",
+        "highlight-theme.css",
+      ),
+    );
     const nonce = getNonce();
 
     return `<!DOCTYPE html>
@@ -195,6 +214,7 @@ export class ChatPanel {
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="${hljsThemeUri}" rel="stylesheet" />
   <link href="${styleUri}" rel="stylesheet" />
   <title>SkepticMonkey Chat</title>
 </head>
@@ -212,6 +232,8 @@ export class ChatPanel {
     <textarea id="input" rows="3" placeholder="Ask SkepticMonkey… (only this message is sent to the API)"></textarea>
     <button id="sendBtn" class="send-btn">Send</button>
   </footer>
+  <script nonce="${nonce}" src="${markedUri}"></script>
+  <script nonce="${nonce}" src="${hljsUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

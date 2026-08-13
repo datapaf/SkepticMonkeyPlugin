@@ -143,25 +143,112 @@ body {
   line-height: 1.45;
 }
 
+.assistant-md {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.markdown-body {
+  line-height: 1.55;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body p {
+  margin: 0.55em 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 0.8em 0 0.35em;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.45em 0;
+  padding-left: 1.4em;
+}
+
+.markdown-body li {
+  margin: 0.2em 0;
+}
+
+.markdown-body code {
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 0.92em;
+  background: color-mix(in srgb, var(--vscode-textCodeBlock-background, #000) 55%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.markdown-body pre {
+  margin: 0.65em 0;
+}
+
+.markdown-body blockquote {
+  margin: 0.55em 0;
+  padding: 0.15em 0.8em;
+  border-left: 3px solid var(--sm-border);
+  opacity: 0.9;
+}
+
+.markdown-body a {
+  color: var(--vscode-textLink-foreground);
+}
+
 .meta {
   margin-top: 8px;
   font-size: 11px;
   opacity: 0.65;
 }
 
-.ue-block {
+.code-block {
+  margin: 0.65em 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--sm-border);
+  background: var(--vscode-textCodeBlock-background, color-mix(in srgb, #000 35%, transparent));
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.code-block code.hljs {
+  display: block;
+  background: transparent !important;
+  padding: 0;
   font-family: var(--vscode-editor-font-family, Consolas, monospace);
   font-size: calc(var(--vscode-editor-font-size, 13px) * 0.95);
-  max-width: 100%;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.code-line {
+  display: block;
+  white-space: pre;
+  min-height: 1.2em;
 }
 
 .ue-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 2px 0;
+  margin: 0;
   width: fit-content;
   max-width: 100%;
+  white-space: pre;
 }
 
 .ue-indent {
@@ -170,21 +257,12 @@ body {
 }
 
 .ue-text {
-  padding: 2px 4px;
+  padding: 1px 4px;
   border-radius: 4px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.ue-text.prose,
-.ue-text.fence,
-.ue-text.code {
-  color: var(--vscode-foreground);
+  white-space: pre;
 }
 
 .ue-text.high {
-  font-weight: 700;
   flex: 0 1 auto;
   width: fit-content;
   max-width: 100%;
@@ -194,6 +272,8 @@ body {
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 0.92em;
 }
 
 .composer {

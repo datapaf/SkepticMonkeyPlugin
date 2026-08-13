@@ -11,6 +11,13 @@
   let threshold = 0.5;
   let busy = false;
 
+  if (typeof marked !== "undefined") {
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+    });
+  }
+
   function escapeHtml(text) {
     return String(text)
       .replace(/&/g, "&amp;")
@@ -19,23 +26,20 @@
       .replace(/"/g, "&quot;");
   }
 
-  /**
-   * Map uncertainty above the threshold to [0, 1] intensity
-   * (near threshold → low, near 1 → high).
-   */
   function uncertaintyIntensity(label, ueThreshold) {
     const span = Math.max(1e-6, 1 - ueThreshold);
     return Math.min(1, Math.max(0, (label - ueThreshold) / span));
   }
 
-  /** Soft → strong red fill/text from intensity. */
-  function uncertaintyHighlightStyle(intensity) {
-    const fillAlpha = 0.1 + intensity * 0.42;
+  /** Background-only fill so syntax colors remain visible. */
+  function uncertaintyFillStyle(intensity) {
+    const fillAlpha = 0.12 + intensity * 0.4;
+    return `background-color: rgba(198, 40, 40, ${fillAlpha.toFixed(3)});`;
+  }
+
+  function scoreColorStyle(intensity) {
     const textAlpha = 0.55 + intensity * 0.45;
-    return (
-      `background-color: rgba(198, 40, 40, ${fillAlpha.toFixed(3)}); ` +
-      `color: rgba(198, 40, 40, ${textAlpha.toFixed(3)});`
-    );
+    return `color: rgba(198, 40, 40, ${textAlpha.toFixed(3)});`;
   }
 
   function fenceLanguage(fenceLine) {
@@ -43,10 +47,34 @@
     return (match && match[1] ? match[1] : "").toLowerCase();
   }
 
+  function normalizeHljsLang(lang) {
+    const aliases = {
+      py: "python",
+      python3: "python",
+      js: "javascript",
+      ts: "typescript",
+      tsx: "typescript",
+      jsx: "javascript",
+      rb: "ruby",
+      sh: "bash",
+      shell: "bash",
+      zsh: "bash",
+      yml: "yaml",
+      csharp: "csharp",
+      cs: "csharp",
+      "c++": "cpp",
+      rs: "rust",
+      kt: "kotlin",
+      plaintext: "plaintext",
+      text: "plaintext",
+    };
+    return aliases[lang] || lang || "plaintext";
+  }
+
   function usesHashComments(lang) {
     return (
       !lang ||
-      /^(py|python|ruby|rb|perl|pl|r|shell|bash|sh|zsh|powershell|ps1|yaml|yml|toml|dockerfile|makefile|cmake|elixir|ex|julia|jl|python3)$/.test(
+      /^(py|python|python3|ruby|rb|perl|pl|r|shell|bash|sh|zsh|powershell|ps1|yaml|yml|toml|dockerfile|makefile|cmake|elixir|ex|julia|jl)$/.test(
         lang,
       )
     );
@@ -67,8 +95,7 @@
 
   /**
    * True only when the whole line is a comment (no code).
-   * Lines like `x = 1  # note` or `foo(); // note` are NOT comment-only.
-   * Updates blockState for multi-line block comments, HTML comments, and docstrings.
+   * Trailing comments on code lines do not count.
    */
   function isCommentOnlyLine(stripped, lang, blockState) {
     if (!stripped) {
@@ -81,7 +108,6 @@
         return true;
       }
       blockState.kind = null;
-      // Comment-only iff nothing but whitespace after */
       return stripped.slice(end + 2).trim() === "";
     }
     if (blockState.kind === "html") {
@@ -103,7 +129,6 @@
       return stripped.slice(end + opener.length).trim() === "";
     }
 
-    // Full-line line comments (must start at first non-space char).
     if (usesHashComments(lang) && stripped.startsWith("#")) {
       return true;
     }
@@ -114,7 +139,6 @@
       return true;
     }
 
-    // Full-line /* ... */ or start of a multi-line block comment.
     if (usesSlashComments(lang) && stripped.startsWith("/*")) {
       const end = stripped.indexOf("*/");
       if (end === -1) {
@@ -136,7 +160,6 @@
       return stripped.slice(end + 3).trim() === "";
     }
 
-    // Full-line Python/Ruby docstrings.
     if (usesHashComments(lang) && /^("""|''')/.test(stripped)) {
       const opener = stripped.startsWith('"""') ? '"""' : "'''";
       const rest = stripped.slice(3);
@@ -152,81 +175,187 @@
     return false;
   }
 
-  /**
-   * Highlight uncertain code lines inside fences. Skips comment-only lines;
-   * code lines that also have trailing comments can still be highlighted.
-   */
-  function colorizeLineUeOutput(lines, ueThreshold) {
-    const parts = [];
-    let inCodeBlock = false;
-    let lang = "";
-    const blockState = { kind: null, opener: null };
+  function stripTrailingNewline(text) {
+    return text.replace(/[\r\n]+$/, "");
+  }
 
-    for (const item of lines || []) {
-      const line = item.text ?? "";
-      const label = Number(item.uncertainty);
-      const stripped = line.replace(/^\s+/, "");
-      const isFence = stripped.startsWith("```");
-
-      let showScore = false;
-      let textClass = "prose";
-      let scoreClass = "";
-      let intensity = 0;
-
-      if (isFence) {
-        textClass = "fence";
-        if (!inCodeBlock) {
-          lang = fenceLanguage(stripped);
-          blockState.kind = null;
-          blockState.opener = null;
-          inCodeBlock = true;
-        } else {
-          inCodeBlock = false;
-          lang = "";
-          blockState.kind = null;
-          blockState.opener = null;
-        }
-      } else if (inCodeBlock) {
-        const commentOnly = isCommentOnlyLine(stripped, lang, blockState);
-        if (!commentOnly && label > ueThreshold) {
-          showScore = true;
-          textClass = "high";
-          scoreClass = "high";
-          intensity = uncertaintyIntensity(label, ueThreshold);
-        } else {
-          textClass = "code";
-        }
+  /** Split API line items that contain embedded newlines into one row each. */
+  function expandCodeItems(codeItems) {
+    const out = [];
+    for (const item of codeItems || []) {
+      const text = stripTrailingNewline(item.text ?? "");
+      const parts = text.split(/\r?\n/);
+      for (const part of parts) {
+        out.push({
+          text: part,
+          uncertainty: Number(item.uncertainty),
+        });
       }
+    }
+    return out;
+  }
 
-      const displayLine = escapeHtml(line).replace(/\n/g, "");
+  function highlightCode(code, lang) {
+    if (typeof hljs === "undefined") {
+      return escapeHtml(code);
+    }
+    const normalized = normalizeHljsLang(lang);
+    try {
+      if (normalized && hljs.getLanguage(normalized)) {
+        return hljs.highlight(code, {
+          language: normalized,
+          ignoreIllegals: true,
+        }).value;
+      }
+      return hljs.highlightAuto(code).value;
+    } catch (_err) {
+      return escapeHtml(code);
+    }
+  }
 
-      if (showScore) {
-        const leadingMatch = line.match(/^[ \t]*/);
+  function parseMarkdown(text) {
+    if (!text) {
+      return "";
+    }
+    if (typeof marked === "undefined") {
+      return `<div class="content">${escapeHtml(text)}</div>`;
+    }
+    return `<div class="markdown-body">${marked.parse(text)}</div>`;
+  }
+
+  function renderCodeBlock(codeItems, lang, ueThreshold) {
+    const blockState = { kind: null, opener: null };
+    const rows = [];
+    const expanded = expandCodeItems(codeItems);
+
+    for (let i = 0; i < expanded.length; i++) {
+      const item = expanded[i];
+      const label = Number(item.uncertainty);
+      const rawLine = item.text ?? "";
+      const stripped = rawLine.replace(/^\s+/, "");
+      const commentOnly = isCommentOnlyLine(stripped, lang, blockState);
+      // Per-line highlight keeps scores aligned with the exact source line.
+      const hlLine = highlightCode(rawLine, lang);
+
+      if (!commentOnly && label > ueThreshold) {
+        const intensity = uncertaintyIntensity(label, ueThreshold);
+        const leadingMatch = rawLine.match(/^[ \t]*/);
         const leading = leadingMatch ? leadingMatch[0] : "";
-        const trimmed = line.slice(leading.length).replace(/\n/g, "");
-        const indentHtml = leading
+        const leadingHtml = leading
           ? `<span class="ue-indent">${escapeHtml(leading)}</span>`
           : "";
-        const style = uncertaintyHighlightStyle(intensity);
-        parts.push(
-          `<div class="ue-line">` +
-            indentHtml +
-            `<div class="ue-text ${textClass}" style="${style}">${escapeHtml(trimmed)}</div>` +
-            `<span class="ue-score ${scoreClass}" style="color: rgba(198, 40, 40, ${(0.55 + intensity * 0.45).toFixed(3)});">${label.toFixed(3)}</span>` +
-            `</div>`,
+
+        let contentHtml = hlLine;
+        if (leading) {
+          const escapedIndent = escapeHtml(leading);
+          if (contentHtml.startsWith(escapedIndent)) {
+            contentHtml = contentHtml.slice(escapedIndent.length);
+          } else {
+            contentHtml = contentHtml.replace(/^[ \t]+/, "");
+          }
+        }
+
+        rows.push(
+          `<span class="ue-line">` +
+            leadingHtml +
+            `<span class="ue-text high" style="${uncertaintyFillStyle(intensity)}">${contentHtml || "&nbsp;"}</span>` +
+            `<span class="ue-score" style="${scoreColorStyle(intensity)}">${label.toFixed(3)}</span>` +
+            `</span>`,
         );
       } else {
-        parts.push(
-          `<div class="ue-text ${textClass}">${displayLine}</div>`,
+        rows.push(
+          `<span class="code-line">${hlLine || "&nbsp;"}</span>`,
         );
       }
     }
 
-    return `<div class="ue-block">${parts.join("")}</div>`;
+    const langClass = lang
+      ? ` language-${escapeHtml(normalizeHljsLang(lang))}`
+      : "";
+    return (
+      `<pre class="code-block"><code class="hljs${langClass}">` +
+      rows.join("") +
+      `</code></pre>`
+    );
+  }
+
+  /**
+   * Render API lines as markdown prose + syntax-highlighted code fences,
+   * with uncertainty fill on non-comment code lines above threshold.
+   */
+  function renderLinesAsMarkdown(lines, ueThreshold) {
+    const parts = [];
+    let proseBuf = "";
+    let inCode = false;
+    let lang = "";
+    let codeItems = [];
+
+    function flushProse() {
+      if (!proseBuf) {
+        return;
+      }
+      parts.push(parseMarkdown(proseBuf));
+      proseBuf = "";
+    }
+
+    function flushCode() {
+      parts.push(renderCodeBlock(codeItems, lang, ueThreshold));
+      codeItems = [];
+      lang = "";
+    }
+
+    for (const item of lines || []) {
+      const line = item.text ?? "";
+      const stripped = line.replace(/^\s+/, "");
+      const isFence = stripped.startsWith("```");
+
+      if (isFence) {
+        if (!inCode) {
+          flushProse();
+          inCode = true;
+          lang = fenceLanguage(stripped);
+          codeItems = [];
+          // Support ```python def foo(): on one line
+          const restMatch = stripped.match(/^```[\w+-]*[ \t]*(.*)$/);
+          const rest = restMatch && restMatch[1] ? restMatch[1] : "";
+          if (rest) {
+            codeItems.push({
+              text: rest,
+              uncertainty: item.uncertainty,
+            });
+          }
+        } else {
+          flushCode();
+          inCode = false;
+        }
+        continue;
+      }
+
+      if (inCode) {
+        codeItems.push(item);
+      } else {
+        proseBuf += line;
+      }
+    }
+
+    if (inCode) {
+      // Unclosed fence: treat remaining as code.
+      flushCode();
+    }
+    flushProse();
+
+    return `<div class="assistant-md">${parts.join("")}</div>`;
   }
 
   function renderPlain(content) {
     return `<div class="content">${escapeHtml(content)}</div>`;
+  }
+
+  function renderAssistantBody(msg) {
+    if (Array.isArray(msg.lines) && msg.lines.length) {
+      return renderLinesAsMarkdown(msg.lines, threshold);
+    }
+    return parseMarkdown(msg.content || "");
   }
 
   function renderMessages(messages) {
@@ -256,8 +385,8 @@
       bubble.appendChild(role);
 
       const body = document.createElement("div");
-      if (msg.role === "assistant" && Array.isArray(msg.lines) && msg.lines.length) {
-        body.innerHTML = colorizeLineUeOutput(msg.lines, threshold);
+      if (msg.role === "assistant") {
+        body.innerHTML = renderAssistantBody(msg);
       } else {
         body.innerHTML = renderPlain(msg.content || "");
       }
