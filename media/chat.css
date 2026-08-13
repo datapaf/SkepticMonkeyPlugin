@@ -48,8 +48,7 @@ body {
   gap: 6px;
 }
 
-.icon-btn,
-.send-btn {
+.icon-btn {
   appearance: none;
   border: 1px solid var(--sm-border);
   background: var(--vscode-button-secondaryBackground, transparent);
@@ -60,20 +59,11 @@ body {
   font: inherit;
 }
 
-.send-btn {
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border-color: transparent;
-  min-width: 72px;
-}
-
-.icon-btn:hover,
-.send-btn:hover {
+.icon-btn:hover {
   filter: brightness(1.08);
 }
 
-.icon-btn:disabled,
-.send-btn:disabled {
+.icon-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -286,9 +276,6 @@ body {
 }
 
 .composer {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
   padding: 12px 24px 16px;
   border-top: 1px solid var(--sm-border);
   background: var(--vscode-editor-background, var(--vscode-sideBar-background));
@@ -297,7 +284,13 @@ body {
   margin: 0 auto;
 }
 
+.composer-box {
+  position: relative;
+  width: 100%;
+}
+
 #input {
+  display: block;
   width: 100%;
   resize: vertical;
   min-height: 64px;
@@ -307,15 +300,74 @@ body {
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
   padding: 8px 10px;
+  /* Keep text clear of the circular send button (top-right, 1/3 of min textbox height) */
+  padding-right: 40px;
+  padding-top: 10px;
   font: inherit;
+  box-sizing: border-box;
 }
 
 #input:focus {
   outline: 1px solid var(--vscode-focusBorder);
 }
 
+.send-btn {
+  appearance: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 21px;
+  height: 21px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.send-btn:hover {
+  filter: brightness(1.08);
+}
+
+.send-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.send-icon {
+  width: 90%;
+  height: 90%;
+  display: block;
+}
+
 .busy-note {
   font-size: 12px;
   opacity: 0.8;
   font-style: italic;
+}
+
+.busy-ellipsis::after {
+  content: "";
+  animation: busy-ellipsis 1.2s steps(4, end) infinite;
+}
+
+@keyframes busy-ellipsis {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
 }

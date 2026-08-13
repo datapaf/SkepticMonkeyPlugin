@@ -460,7 +460,7 @@
     if (busy) {
       const note = document.createElement("div");
       note.className = "busy-note";
-      note.textContent = "Generating with uncertainty estimates…";
+      note.innerHTML = 'Replying<span class="busy-ellipsis" aria-hidden="true"></span>';
       messagesEl.appendChild(note);
     }
 

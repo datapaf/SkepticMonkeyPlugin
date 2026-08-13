@@ -245,8 +245,14 @@ export class ChatPanel {
   <div id="apiHint" class="api-hint"></div>
   <main id="messages" class="messages" aria-live="polite"></main>
   <footer class="composer">
-    <textarea id="input" rows="3" placeholder="Ask AI"></textarea>
-    <button id="sendBtn" class="send-btn">Send</button>
+    <div class="composer-box">
+      <textarea id="input" rows="3" placeholder="Ask AI"></textarea>
+      <button id="sendBtn" class="send-btn" type="button" title="Send" aria-label="Send">
+        <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 4l-6 6h4v8h4v-8h4l-6-6z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
   </footer>
   <script nonce="${nonce}" src="${markedUri}"></script>
   <script nonce="${nonce}" src="${hljsUri}"></script>
