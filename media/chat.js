@@ -20,8 +20,8 @@
   }
 
   /**
-   * Mirror HallucinationDetectionViewer colorize_line_ue_output:
-   * green/red UE highlighting only inside markdown code fences.
+   * Highlight only code lines (inside markdown fences) whose uncertainty
+   * exceeds the threshold. Below-threshold code and prose stay uncolored.
    */
   function colorizeLineUeOutput(lines, ueThreshold) {
     const parts = [];
@@ -40,23 +40,27 @@
       if (isFence) {
         textClass = "fence";
         inCodeBlock = !inCodeBlock;
-      } else if (inCodeBlock) {
+      } else if (inCodeBlock && label > ueThreshold) {
         showScore = true;
-        if (label > ueThreshold) {
-          textClass = "high";
-          scoreClass = "high";
-        } else {
-          textClass = "low";
-          scoreClass = "low";
-        }
+        textClass = "high";
+        scoreClass = "high";
+      } else if (inCodeBlock) {
+        textClass = "code";
       }
 
       const displayLine = escapeHtml(line).replace(/\n/g, "");
 
       if (showScore) {
+        const leadingMatch = line.match(/^[ \t]*/);
+        const leading = leadingMatch ? leadingMatch[0] : "";
+        const trimmed = line.slice(leading.length).replace(/\n/g, "");
+        const indentHtml = leading
+          ? `<span class="ue-indent">${escapeHtml(leading)}</span>`
+          : "";
         parts.push(
           `<div class="ue-line">` +
-            `<div class="ue-text ${textClass}">${displayLine}</div>` +
+            indentHtml +
+            `<div class="ue-text ${textClass}">${escapeHtml(trimmed)}</div>` +
             `<span class="ue-score ${scoreClass}">${label.toFixed(3)}</span>` +
             `</div>`,
         );

@@ -1,15 +1,13 @@
 # SkepticMonkey VS Code Extension
 
-Chat with [SkepticMonkey](https://github.com/datapaf/SkepticMonkey) from VS Code and inspect **line-level uncertainty** on generated code, using the same red/green highlighting as [HallucinationDetectionViewer](https://github.com/datapaf/HallucinationDetectionViewer).
+Chat with [SkepticMonkey](https://github.com/datapaf/SkepticMonkey) from VS Code and inspect **line-level uncertainty** on generated code.
 
 ## Features
 
 - **Chat tab in the editor area** (full-width webview panel)
 - Activity-bar shortcut: SkepticMonkey icon → **Open Chat**
 - Sends **only the latest user message** to the API (conversation history is local UI only)
-- Shows the full generation with uncertainty scores on **code lines inside markdown fences**
-  - uncertainty **> threshold** → red
-  - otherwise → green
+- Shows the full generation; only **code lines above the uncertainty threshold** are highlighted in red with scores
 - Configurable API URL and uncertainty threshold
 
 ## Prerequisites
@@ -57,7 +55,7 @@ and install the generated `.vsix`.
 
 The extension wraps the user's message in the same DeepSeek-Coder instruct template used by HallucinationDetectionViewer (`templated_question`) and sets `no-template` so the API does not wrap or retokenize it a second time.
 
-Response `lines` are rendered like the Streamlit viewer: prose stays uncolored; only lines inside code fences get red/green borders and numeric scores.
+Response `lines` are rendered with uncertainty only for code-fence lines above the threshold; other lines stay uncolored.
 
 ## License
 

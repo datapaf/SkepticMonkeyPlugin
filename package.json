@@ -91,7 +91,7 @@
           "default": 0.5,
           "minimum": 0,
           "maximum": 1,
-          "description": "Lines with uncertainty above this threshold are highlighted in red; others in green (code fences only)."
+          "description": "Only code lines with uncertainty above this threshold are highlighted (code fences only)."
         },
         "skepticMonkey.requestTimeoutMs": {
           "type": "number",

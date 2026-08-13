@@ -6,7 +6,6 @@
   --sm-system-bg: color-mix(in srgb, var(--vscode-inputValidation-errorBackground) 35%, transparent);
   --sm-border: var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
   --sm-uncertain: #c62828;
-  --sm-certain: #2e7d32;
 }
 
 * {
@@ -159,22 +158,28 @@ body {
 .ue-line {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   margin: 2px 0;
+  width: fit-content;
   max-width: 100%;
+}
+
+.ue-indent {
+  white-space: pre;
+  flex-shrink: 0;
 }
 
 .ue-text {
   padding: 2px 4px;
   border-radius: 4px;
-  flex: 1;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .ue-text.prose,
-.ue-text.fence {
+.ue-text.fence,
+.ue-text.code {
   color: var(--vscode-foreground);
 }
 
@@ -182,29 +187,19 @@ body {
   border: 1px solid DarkRed;
   color: var(--sm-uncertain);
   font-weight: 700;
-}
-
-.ue-text.low {
-  border: 1px solid DarkGreen;
-  color: var(--sm-certain);
-  font-weight: 700;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .ue-score {
   font-weight: 700;
   white-space: nowrap;
-  margin-left: 4px;
-  min-width: 3.5em;
-  text-align: right;
   flex-shrink: 0;
 }
 
 .ue-score.high {
   color: var(--sm-uncertain);
-}
-
-.ue-score.low {
-  color: var(--sm-certain);
 }
 
 .composer {
