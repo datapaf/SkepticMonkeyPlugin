@@ -149,7 +149,7 @@ export class ChatPanel {
     const { apiUrl, timeoutMs } = this.getConfig();
 
     try {
-      // Intentionally send only the latest user message — not full history.
+      // Send the Viewer-style templated prompt with no-template so tokenization matches.
       const result = await estimateLineUncertainty(
         apiUrl,
         buildInputText(text),

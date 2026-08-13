@@ -52,8 +52,10 @@ and install the generated `.vsix`.
 `POST {apiUrl}/estimate/line`
 
 ```json
-{ "input_text": "### Instruction:\n...\n### Response:\n" }
+{ "input_text": "<DeepSeek-Coder chat template>", "no-template": true }
 ```
+
+The extension wraps the user's message in the same DeepSeek-Coder instruct template used by HallucinationDetectionViewer (`templated_question`) and sets `no-template` so the API does not wrap or retokenize it a second time.
 
 Response `lines` are rendered like the Streamlit viewer: prose stays uncolored; only lines inside code fences get red/green borders and numeric scores.
 

@@ -22,13 +22,18 @@ export class SkepticMonkeyApiError extends Error {
   }
 }
 
+/** DeepSeek-Coder BOS + default system prompt, matching HallucinationDetectionViewer dataset prompts. */
+const DEEPSEEK_BOS = "<｜begin▁of▁sentence｜>";
+const DEEPSEEK_SYSTEM =
+  "You are an AI programming assistant, utilizing the Deepseek Coder model, developed by Deepseek Company, and you only answer questions related to computer science. For politically sensitive questions, security and privacy issues, and other non-computer science questions, you will refuse to answer";
+
 /**
- * Build the instruct-style prompt expected by SkepticMonkey / DeepSeek-Coder.
- * Only the latest user message is included (no chat history).
+ * Build the same fully templated prompt the Viewer sends as templated_question.
+ * Sent with no-template so the API tokenizes it as-is (same path as the Viewer).
  */
 export function buildInputText(userMessage: string): string {
-  const trimmed = userMessage.trim();
-  return `### Instruction:\n${trimmed}\n### Response:\n`;
+  const instruction = userMessage.trim();
+  return `${DEEPSEEK_BOS}${DEEPSEEK_SYSTEM}\n### Instruction:\n${instruction}\n\n### Response:\n`;
 }
 
 export async function estimateLineUncertainty(
@@ -44,7 +49,10 @@ export async function estimateLineUncertainty(
     const response = await fetch(`${base}/estimate/line`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input_text: inputText }),
+      body: JSON.stringify({
+        input_text: inputText,
+        "no-template": true,
+      }),
       signal: controller.signal,
     });
 
