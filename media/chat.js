@@ -20,8 +20,27 @@
   }
 
   /**
+   * Map uncertainty above the threshold to [0, 1] intensity
+   * (near threshold → low, near 1 → high).
+   */
+  function uncertaintyIntensity(label, ueThreshold) {
+    const span = Math.max(1e-6, 1 - ueThreshold);
+    return Math.min(1, Math.max(0, (label - ueThreshold) / span));
+  }
+
+  /** Soft → strong red fill/text from intensity. */
+  function uncertaintyHighlightStyle(intensity) {
+    const fillAlpha = 0.1 + intensity * 0.42;
+    const textAlpha = 0.55 + intensity * 0.45;
+    return (
+      `background-color: rgba(198, 40, 40, ${fillAlpha.toFixed(3)}); ` +
+      `color: rgba(198, 40, 40, ${textAlpha.toFixed(3)});`
+    );
+  }
+
+  /**
    * Highlight only code lines (inside markdown fences) whose uncertainty
-   * exceeds the threshold. Below-threshold code and prose stay uncolored.
+   * exceeds the threshold. Fill intensity scales with how far above threshold.
    */
   function colorizeLineUeOutput(lines, ueThreshold) {
     const parts = [];
@@ -36,6 +55,7 @@
       let showScore = false;
       let textClass = "prose";
       let scoreClass = "";
+      let intensity = 0;
 
       if (isFence) {
         textClass = "fence";
@@ -44,6 +64,7 @@
         showScore = true;
         textClass = "high";
         scoreClass = "high";
+        intensity = uncertaintyIntensity(label, ueThreshold);
       } else if (inCodeBlock) {
         textClass = "code";
       }
@@ -57,11 +78,12 @@
         const indentHtml = leading
           ? `<span class="ue-indent">${escapeHtml(leading)}</span>`
           : "";
+        const style = uncertaintyHighlightStyle(intensity);
         parts.push(
           `<div class="ue-line">` +
             indentHtml +
-            `<div class="ue-text ${textClass}">${escapeHtml(trimmed)}</div>` +
-            `<span class="ue-score ${scoreClass}">${label.toFixed(3)}</span>` +
+            `<div class="ue-text ${textClass}" style="${style}">${escapeHtml(trimmed)}</div>` +
+            `<span class="ue-score ${scoreClass}" style="color: rgba(198, 40, 40, ${(0.55 + intensity * 0.45).toFixed(3)});">${label.toFixed(3)}</span>` +
             `</div>`,
         );
       } else {

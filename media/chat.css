@@ -157,7 +157,7 @@ body {
 
 .ue-line {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
   margin: 2px 0;
   width: fit-content;
@@ -184,8 +184,6 @@ body {
 }
 
 .ue-text.high {
-  border: 1px solid DarkRed;
-  color: var(--sm-uncertain);
   font-weight: 700;
   flex: 0 1 auto;
   width: fit-content;
@@ -196,10 +194,6 @@ body {
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-.ue-score.high {
-  color: var(--sm-uncertain);
 }
 
 .composer {
